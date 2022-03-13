@@ -2,7 +2,6 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.NIST_LWAPI_pkg.all;
---use work.LWC_pkg.all;
 use work.Design_pkg.all;
 use work.xoodyak_constants.all;
 
@@ -55,11 +54,12 @@ entity xoodyak_ctrl is
         tag_neq  : in std_logic;
         --! rdi data form outside world to be used as PRNG seed
         rdi_valid : in std_logic;
-        rdi_ready : out std_logic;
-        --! PRNG
-        prng_rdi_valid : in std_logic;
-        prng_reseed : out std_logic;
-        en_seed_sipo : out std_logic
+        rdi_ready : out std_logic
+--        ;
+--        --! PRNG
+--        prng_rdi_valid : in std_logic;
+--        prng_reseed : out std_logic;
+--        en_seed_sipo : out std_logic
     );
 end xoodyak_ctrl;
 
@@ -109,8 +109,7 @@ begin
                   tag_valid, bdi_eoi_r,
                   key_valid, key_update, 
                   bdi_valid, bdi_eot, bdi_eoi, bdi_type, bdi_size, decrypt_in, bdo_ready,
-                  msg_auth_ready,
-                  prng_rdi_valid, rdi_valid
+                  msg_auth_ready, rdi_valid
           )
     begin
         --! Default values
@@ -142,41 +141,12 @@ begin
         bdo_valid_bytes <= x"0";
         msg_auth_valid <= '0';
         end_of_block <= '0';
-        --
-        prng_reseed <= '0';
         rdi_ready <= '0';
-        en_seed_sipo <= '0';
         
         case current_state is
-            --!============================================ PRNG setup
             when S_RST =>
-                next_state <= S_LOAD_SEED;
+                next_state <= S_IDLE;
                 
-            when S_LOAD_SEED =>
-                rdi_ready <= '1';
-                if rdi_valid = '1' then
-                    en_seed_sipo <= '1';
-                    if wrd_cnt = SEED_SIZE / RW -1 then
-                        next_state <= S_START_PRNG;
-                    else
-                        next_state <= S_LOAD_SEED;
-                    end if;
-                    next_wrd_cnt <= wrd_cnt + 1;
-                else
-                    next_state <= S_LOAD_SEED;
-                end if;
-            
-            when S_START_PRNG =>
-                prng_reseed <= '1';
-                next_state <= S_WAIT_PRNG;
-            
-            when S_WAIT_PRNG =>
-                if prng_rdi_valid = '1' then
-                    next_state <= S_IDLE;
-                else
-                    next_state <= S_WAIT_PRNG;
-                end if;
-            
             ---!============================================ Wait
             when S_IDLE =>
                 --clear

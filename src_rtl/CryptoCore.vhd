@@ -36,7 +36,7 @@ entity CryptoCore_SCA is
             msg_auth_ready  : in  STD_LOGIC;
             msg_auth        : out STD_LOGIC;
             --! Random Input
-            rdi             : in  std_logic_vector(RW - 1 downto 0);
+            rdi             : in  std_logic_vector(CCRW - 1 downto 0);
             rdi_valid       : in  std_logic;
             rdi_ready       : out std_logic
         );
@@ -60,20 +60,8 @@ architecture behavioral of CryptoCore_SCA is
     signal sel_decrypt : std_logic;
     signal tag_neq : std_logic;
     signal perm_valid : std_logic;
-    --! PRNG signals
-    signal reseed, prng_rdi_valid : std_logic;
-    signal prng_rdi_data : std_logic_vector(384 - 1 downto 0);
-    signal seed : std_logic_vector(768 - 1 downto 0); --6 instances of Trivuim each needs 128 bit seed
-    signal en_seed_sipo : std_logic;
-    --! security sensitive
---    signal bdi_a, bdi_bc, bdo, key_bc : std_logic_vector(31 downto 0);
 
 begin
-    
-    --! make sure shares are not back-to-back. This may case HD leakage. Using three shares
---	key_bc <= key() xor key_c; 
---	bdi_bc <= bdi_b xor bdi_c;
---	bdo_b <= (others=>'0');
 	
     --! datapath
     dp: entity work.xoodyak_dp(behav)
@@ -104,7 +92,7 @@ begin
         key1          => key(SDI_SHARES*CCSW-1 downto CCW),
         bdo0          => bdo(CCW-1 downto 0),
         bdo1          => bdo(PDI_SHARES*CCW-1 downto CCW),
-        prng_rdi_data => prng_rdi_data
+        prng_rdi_data => rdi
     );
     
     ctrl: entity work.xoodyak_ctrl(behav)
@@ -156,36 +144,7 @@ begin
         perm_valid => perm_valid,
         --! rdi data form outside world to be used as PRNG seed
         rdi_valid => rdi_valid,
-        rdi_ready => rdi_ready,
-        --! PRNG
-        prng_rdi_valid => prng_rdi_valid,
-        prng_reseed => reseed,
-        en_seed_sipo => en_seed_sipo
+        rdi_ready => rdi_ready
     );
-    
-    --Trivium PRNG
-    trivium_inst : entity work.prng_trivium_enhanced(structural)
-    generic map (N => NUM_TRIVIUM_UNITS)
-    port map(
-		clk         => clk,
-        rst         => rst,
-		en_prng     => '1',
-        seed        => seed,
-		reseed      => reseed,
-		reseed_ack  => open,
-		rdi_data    => prng_rdi_data,
-		rdi_ready   => '1',
-		rdi_valid   => prng_rdi_valid
-	);
-	
-	--! seed SIPO
-	seed_sipo : process(clk)
-	begin
-	   if rising_edge(clk) then
-	       if en_seed_sipo = '1' then
-	           seed <= seed(SEED_SIZE - RW - 1 downto 0) & rdi;
-	       end if;
-	   end if;
-	end process;
 
 end behavioral;

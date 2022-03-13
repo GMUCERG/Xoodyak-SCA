@@ -30,16 +30,7 @@ package Design_pkg is
     constant CCSW            : integer :=32; --! variant dependent design parameters are assigned in body!
     constant CCW             : integer :=32; --! variant dependent design parameters are assigned in body!
     constant CCWdiv8         : integer :=32/8; --! derived from parameters above, assigned in body.
-    constant CCRW            : integer :=32; --! variant dependent design parameters are assigned in body!
+    constant CCRW            : integer :=384; --! variant dependent design parameters are assigned in body!
 
---    --! design parameters exclusivly used by the LWC core implementations
---    constant NPUB_SIZE       : integer := 96;  --! Npub size
---    constant DBLK_SIZE       : integer := 128; --! Block size
-
-    --! Functions
-    --! Reverse the Byte order of the input word.
---    function reverse_byte( vec : std_logic_vector ) return std_logic_vector;
---    --! Reverse the Bit order of the input vector.
---    function reverse_bit( vec : std_logic_vector ) return std_logic_vector;
 
 end Design_pkg;
