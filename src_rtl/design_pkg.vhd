@@ -31,6 +31,7 @@ package Design_pkg is
     constant CCW             : integer :=32; --! variant dependent design parameters are assigned in body!
     constant CCWdiv8         : integer :=32/8; --! derived from parameters above, assigned in body.
     constant CCRW            : integer :=384; --! variant dependent design parameters are assigned in body!
-
+    
+    attribute DONT_TOUCH : string;
 
 end Design_pkg;

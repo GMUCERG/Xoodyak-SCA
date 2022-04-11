@@ -28,7 +28,9 @@ entity cyclist_ops is
         --! from pre-processor
         bdi           : in  std_logic_vector(CCW  - 1 downto 0);
         bdo           : out std_logic_vector(CCW  - 1 downto 0);
-        key           : in  std_logic_vector(CCSW   -1 downto 0)
+        key           : in  std_logic_vector(CCSW   -1 downto 0);
+        --
+        tag           : out std_logic_vector(CCW-1 downto 0)
 
     );
 end cyclist_ops;
@@ -181,6 +183,8 @@ begin
 
     bdo <= state_chunck(39 downto 8) when extract = '1' else bdo_cleared;
     
+    
+    tag <= state_chunck(39 downto 8);
     --!WARNING unprotected tag verification
 --    tag_neq <= '1' when state_chunck(39 downto 8) /= bdi else '0';
     

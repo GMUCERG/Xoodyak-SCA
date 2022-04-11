@@ -54,7 +54,12 @@ entity xoodyak_ctrl is
         tag_neq  : in std_logic;
         --! rdi data form outside world to be used as PRNG seed
         rdi_valid : in std_logic;
-        rdi_ready : out std_logic
+        rdi_ready : out std_logic;
+        --! tag verif
+        cc_tag_valid : out std_logic;
+        cc_tag_ready : in std_logic;
+        cc_tag_last  : out std_logic;
+        tv_done     : in std_logic
 --        ;
 --        --! PRNG
 --        prng_rdi_valid : in std_logic;
@@ -103,14 +108,7 @@ begin
         end if;
     end process;
 
-    comb: process(current_state,  wrd_cnt, first_blk, 
-                  f_ready, f_done, perm_valid,
-                  tag_neq,
-                  tag_valid, bdi_eoi_r,
-                  key_valid, key_update, 
-                  bdi_valid, bdi_eot, bdi_eoi, bdi_type, bdi_size, decrypt_in, bdo_ready,
-                  msg_auth_ready, rdi_valid
-          )
+    comb: process(all)
     begin
         --! Default values
         init <= '0';
@@ -142,6 +140,9 @@ begin
         msg_auth_valid <= '0';
         end_of_block <= '0';
         rdi_ready <= '0';
+        --
+        cc_tag_valid <= '0';
+        cc_tag_last <= '0';        
         
         case current_state is
             when S_RST =>
@@ -404,28 +405,24 @@ begin
                 
             when S_VERIFY_TAG =>
                 wrd_offset <= std_logic_vector(wrd_cnt(3 downto 0));
-                if bdi_valid = '1' then
-                    bdi_ready <= '1';
+                bdi_ready <= cc_tag_ready;
+                cc_tag_valid <= '1';
+                if bdi_valid = '1' and bdi_ready = '1' then
                     if wrd_cnt = TAG_WORDS - 1 then
+                        cc_tag_last <= '1';
                         next_state <= S_OUTPUT_VERIF_RES;
                     else
                         next_wrd_cnt <= wrd_cnt + 1;
                         next_state <= S_VERIFY_TAG;
                     end if;
-                     if tag_neq = '1' then
-                            next_tag_valid <= '0';
-                     end if;
                 else
                     next_state <= S_VERIFY_TAG;
                 end if;
                 
             when S_OUTPUT_VERIF_RES =>
-                msg_auth_valid <= '1';
-                if msg_auth_ready <= '1' then
+                 if tv_done = '1' then
                     next_state <= S_IDLE;
-                else
-                    next_state <= S_OUTPUT_VERIF_RES;
-                end if;
+                 end if;
                 
             when others =>
                 next_state <= S_IDLE;

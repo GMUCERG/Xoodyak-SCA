@@ -34,7 +34,7 @@ entity CryptoCore_SCA is
             --
             msg_auth_valid  : out STD_LOGIC;
             msg_auth_ready  : in  STD_LOGIC;
-            msg_auth        : out STD_LOGIC;
+            msg_auth        : out STD_LOGIC;  
             --! Random Input
             rdi             : in  std_logic_vector(CCRW - 1 downto 0);
             rdi_valid       : in  std_logic;
@@ -60,6 +60,15 @@ architecture behavioral of CryptoCore_SCA is
     signal sel_decrypt : std_logic;
     signal tag_neq : std_logic;
     signal perm_valid : std_logic;
+    
+    signal cc_tag_valid : std_logic;
+    signal cc_tag_ready : std_logic;
+    signal cc_tag_last  : std_logic;
+    signal cc_tag       : std_logic_vector (PDI_SHARES*CCW-1 downto 0);
+    -- DEBUG
+--    signal DEBUG_cc_tag : std_logic_vector(CCW - 1 downto 0);
+--    signal DEBUG_expected_tag : std_logic_vector(CCW - 1 downto 0);
+    
 
 begin
 	
@@ -92,6 +101,8 @@ begin
         key1          => key(SDI_SHARES*CCSW-1 downto CCW),
         bdo0          => bdo(CCW-1 downto 0),
         bdo1          => bdo(PDI_SHARES*CCW-1 downto CCW),
+        tag0          => cc_tag(CCW-1 downto 0),
+        tag1          => cc_tag(PDI_SHARES*CCW-1 downto CCW),
         prng_rdi_data => rdi
     );
     
@@ -121,9 +132,9 @@ begin
         bdo_type        => bdo_type,
         bdo_valid_bytes => bdo_valid_bytes,
         end_of_block    => end_of_block,
-        msg_auth_valid  => msg_auth_valid,
+        msg_auth_valid  => open,
         msg_auth_ready  => msg_auth_ready,
-        msg_auth        => msg_auth,
+        msg_auth        => open,
         --! To datapath
         start_f => start_f,
         f_ready => f_ready,
@@ -144,7 +155,39 @@ begin
         perm_valid => perm_valid,
         --! rdi data form outside world to be used as PRNG seed
         rdi_valid => rdi_valid,
-        rdi_ready => rdi_ready
+        rdi_ready => rdi_ready,
+        cc_tag_valid => cc_tag_valid,
+        cc_tag_ready => cc_tag_ready,
+        cc_tag_last  => cc_tag_last,
+        tv_done => msg_auth_valid and msg_auth_ready -- in
     );
-
+    
+    INST_TAG_VERIF : entity work.tag_verif
+    port map(
+        clk            => clk,
+        rst            => rst,
+        -- Tag received
+        bdi            => bdi,
+        bdi_type       => bdi_type,
+        bdi_last       => bdi_eot,
+        bdi_valid      => cc_tag_valid and bdi_valid,
+        bdi_ready      => open,     -- don't need it
+        -- CryptoCore
+        cc_tag         => cc_tag,
+        cc_tag_last    => cc_tag_last,
+        cc_tag_valid   => cc_tag_valid,
+        cc_tag_ready   => cc_tag_ready,
+        --
+        --
+        rdi            => rdi(PDI_SHARES * CCW - 1 downto 0), -- TODO
+        rdi_valid      => '1', -- tv_rdi_valid,
+        rdi_ready      => open, --tv_rdi_ready,
+        --
+        msg_auth_valid => msg_auth_valid,
+        msg_auth_ready => msg_auth_ready,
+        msg_auth       => msg_auth
+  );
+--    DEBUG_cc_tag <= cc_tag(CCW-1 downto 0) xor cc_tag(PDI_SHARES*CCW-1 downto CCW);
+--    DEBUG_expected_tag <= bdi(CCW-1 downto 0) xor bdi(PDI_SHARES*CCW-1 downto CCW);
+    
 end behavioral;

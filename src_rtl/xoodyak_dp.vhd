@@ -32,6 +32,8 @@ entity xoodyak_dp is
         bdo1           : out std_logic_vector(CCW  - 1 downto 0);
         key0           : in  std_logic_vector(CCSW   -1 downto 0);
         key1           : in  std_logic_vector(CCSW   -1 downto 0);
+        tag0           : out std_logic_vector(CCW  - 1 downto 0);
+        tag1           : out std_logic_vector(CCW  - 1 downto 0);
         --! from prng
         prng_rdi_data : in std_logic_vector(STATE_SIZE - 1 downto 0)
     );
@@ -87,11 +89,12 @@ begin
         extract => extract,
         sel_decrypt => sel_decrypt,
         --! to ctrl
-        tag_neq => open, --FIX later
+        tag_neq => open, -- not used
         --! from pre-processor
         bdi => bdi0,
         bdo => bdo0,
-        key => key0
+        key => key0,
+        tag => tag0
     );
 	--!===========================================================DOMAIN1
     cyc_ops1: entity work.cyclist_ops(behav)
@@ -114,13 +117,12 @@ begin
         extract => extract,
         sel_decrypt => sel_decrypt,
         --! to ctrl
-        tag_neq => open, -- FIX later
+        tag_neq => open, -- not used
         --! from pre-processor
         bdi => bdi1,
         bdo => bdo1,
-        key => key1
+        key => key1,
+        tag => tag1
     );
-   
-    tag_neq <= '0'; --FIX later!!!!!!!
-    
+      
 end behav;
