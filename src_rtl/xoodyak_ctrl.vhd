@@ -188,6 +188,7 @@ begin
             when S_KEY_UP =>
                 state_in_sel <= "01";
                 start_f <= '1';
+                rdi_ready <= '1';
                 if perm_valid = '1' then
                     state_en <= '1';
                 end if;
@@ -222,6 +223,7 @@ begin
             when S_NPUB_UP =>
                 state_in_sel <= "01";
                 start_f <= '1';
+                rdi_ready <= '1';
                 if perm_valid = '1' then
                     state_en <= '1';
                 end if;                
@@ -289,6 +291,7 @@ begin
             when S_AD_UP =>
                 state_in_sel <= "01";
                 start_f <= '1';
+                rdi_ready <= '1';
                 if perm_valid = '1' then
                     state_en <= '1';
                 end if;
@@ -302,6 +305,7 @@ begin
             --!============================================ CRYPT                
             when S_CRYPT_UP =>
                 state_in_sel <= "01";
+                rdi_ready <= '1';
                 if f_ready = '1' then
                     if first_blk = '1' then
                         cucd <= x"80";
@@ -371,6 +375,7 @@ begin
                     cucd <= x"40";
                 end if;
                 start_f <= '1';
+                rdi_ready <= '1';
                 if perm_valid = '1' then
                     state_en <= '1';
                 end if;
