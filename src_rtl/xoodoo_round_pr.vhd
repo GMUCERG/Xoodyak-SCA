@@ -84,7 +84,8 @@ begin
         end if;
     end process;
     
-    perm_valid <= en;    
+    -- perm_valid <= en;    
+    perm_valid <= done;    
     ready <= '1' when (rndctr = 0) else '0';
     done <= '1' when (rndctr = NUM_ROUNDS and en = '1') else '0';
     clr <= '1' when (init = '1' or (rndctr = NUM_ROUNDS and en = '1')) else '0';
