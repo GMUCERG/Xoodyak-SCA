@@ -26,8 +26,8 @@ end chi384;
 
 architecture behav of chi384 is
 
-	attribute keep_hierarchy : string;
-	attribute keep_hierarchy of behav : architecture is "true";
+	attribute dont_touch : string;
+	attribute dont_touch of behav : architecture is "true";
 	
     --delayed signals -- used to fully pipeline Chi.
     signal A0_0_d : std_logic_vector(128-1 downto 0);
@@ -80,6 +80,7 @@ begin
     generic map ( N => 128) 
     port map ( 
         clk => clk,
+        en => en,
         X0  => A1_0,
         X1  => nA1_1,
         Y0  => A2_0,
@@ -93,6 +94,7 @@ begin
     generic map ( N => 128) 
     port map ( 
         clk => clk,
+        en => en,
         X0  => A2_0,
         X1  => nA2_1,
         Y0  => A0_0,
@@ -106,6 +108,7 @@ begin
     generic map ( N => 128) 
     port map ( 
         clk => clk,
+        en => en,
         X0  => A0_0,
         X1  => nA0_1,
         Y0  => A1_0,
@@ -119,12 +122,14 @@ begin
     reg: process(clk)
     begin
         if rising_edge(clk) then
-            A0_0_d <= A0_0;
-            A1_0_d <= A1_0;
-            A2_0_d <= A2_0;
-            A0_1_d <= A0_1;
-            A1_1_d <= A1_1;
-            A2_1_d <= A2_1;
+            if en = '1' then
+                A0_0_d <= A0_0;
+                A1_0_d <= A1_0;
+                A2_0_d <= A2_0;
+                A0_1_d <= A0_1;
+                A1_1_d <= A1_1;
+                A2_1_d <= A2_1;
+            end if;
         end if;
     end process;
     

@@ -22,8 +22,8 @@ end xoodoo_round_pr;
 
 architecture behav of xoodoo_round_pr is
 
-	attribute keep_hierarchy : string;
-	attribute keep_hierarchy of behav : architecture is "true";
+	attribute dont_touch : string;
+	attribute dont_touch of behav : architecture is "true";
 
     signal chi_o0_0, chi_o1_0, chi_o2_0 : std_logic_vector(127 downto 0);
     signal chi_o0_1, chi_o1_1, chi_o2_1 : std_logic_vector(127 downto 0);

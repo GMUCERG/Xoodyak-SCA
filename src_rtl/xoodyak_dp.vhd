@@ -40,8 +40,8 @@ entity xoodyak_dp is
 end xoodyak_dp;
 
 architecture behav of xoodyak_dp is
-    attribute keep_hierarchy : string;
-	attribute keep_hierarchy of behav : architecture is "true";
+    attribute dont_touch : string;
+	attribute dont_touch of behav : architecture is "true";
 
     --! Domain0
     signal perm_din0, perm_dout0 : std_logic_vector(STATE_SIZE - 1 downto 0);

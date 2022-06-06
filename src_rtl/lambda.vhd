@@ -14,8 +14,8 @@ entity lambda is
 end lambda;
 
 architecture behav of lambda is
-	attribute keep_hierarchy : string;
-	attribute keep_hierarchy of behav : architecture is "true";
+	attribute dont_touch : string;
+	attribute dont_touch of behav : architecture is "true";
 	
     signal p_plane :std_logic_vector(128-1 downto 0);
 	signal eshift :std_logic_vector(128-1 downto 0);
