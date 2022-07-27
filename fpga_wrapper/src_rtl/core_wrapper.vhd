@@ -48,7 +48,8 @@ generic(
     FIFO_OUT_LOG2DEPTH  : natural := 8;
     -- rdi-related generics
     FIFO_RDI_WIDTH      : natural := 32; --in bits -- WARNING: Must be a multiple of 32-bits
-    FIFO_RDI_LOG2DEPTH  : natural := 8
+    FIFO_RDI_LOG2DEPTH  : natural := 8;
+    RAND_WORDS          : natural := 1000
 );
 port(
     clk             : in std_logic;
@@ -259,7 +260,8 @@ begin
     cmd             <= conf_reg0_r(3 downto 0);
     --
 
-    prng_seed       <= 0x"00000000_00000000" & conf_reg7_r & conf_reg6_r & conf_reg5_r & conf_reg4_r;
+--    prng_seed       <= 0x"00000000_00000000" & conf_reg7_r & conf_reg6_r & conf_reg5_r & conf_reg4_r;
+     prng_seed       <= (others=>'0');
     --==========================================================================================
     
     -- in fifo0 and sipo ==============================
@@ -345,7 +347,7 @@ begin
         dout        => out_fifo_dout
     );
 
-    out_piso : entity work.dut_piso(behav)
+    out_piso : entity work.dut_piso(behav) --WANING is output stage leaking when we get data into 4 bits? Block input to piso untill done
     generic map(
         WI => FIFO_OUT_WIDTH,
         WO => 4
@@ -401,15 +403,20 @@ begin
         nx_rand_cnt <= rand_cnt_r;
 
         case (state_r) is
+            when CONF_PRNG =>
+                prng_en <= '1';
+                prng_reseed <= '1';
+                nx_prng_seeded <= '1';
+                nx_state <= CLR;
             when CLR =>
                 fifo_rst <= '1';
                 clr_cmd_reg <= '1';
                 nx_cnt <= (others=>'0');
-                if rand_requested_r = '1' then
+                --rand_requested_r = '1' then
                     nx_state <= GEN_RAND;
-                else
-                    nx_state <= INST0;
-                end if;
+                --else
+                 --   nx_state <= INST0;
+                --end if;
 
             when INST0 =>
                 if  cmd = CMD_GEN_RAND then
@@ -553,9 +560,10 @@ begin
                 
             when GEN_RAND =>
                 prng_en <= '1';
-                if prng_seeded_r = '1' then
+                --if prng_seeded_r = '1' then
                     if prng_rdi_valid = '1' then
-                        if rand_cnt_r = rand_words_r -1 then
+--                        if rand_cnt_r = rand_words_r -1 then
+                        if rand_cnt_r = RAND_WORDS -1 then
                             nx_rand_cnt <= (others=>'0');
                             nx_rand_generated <= '1';
                             nx_state <= INST0;
@@ -563,15 +571,15 @@ begin
                             nx_rand_cnt <= rand_cnt_r + 1;
                         end if;
                     end if;
-                else
-                    nx_state <= CONF_PRNG;        
-                end if;
+                --else
+                  --  nx_state <= CONF_PRNG;        
+                --end if;
             
-            when CONF_PRNG =>
-                prng_en <= '1';
-                prng_reseed <= '1';
-                nx_prng_seeded <= '1';
-                nx_state <= GEN_RAND;
+--            when CONF_PRNG =>
+--                prng_en <= '1';
+--                prng_reseed <= '1';
+--                nx_prng_seeded <= '1';
+--                nx_state <= GEN_RAND;
                 
             when INVALID_INST => 
                     status <= '1';
@@ -587,7 +595,7 @@ begin
     begin
         if rising_edge(clk) then
             if rst = '1' then
-                state_r <= CLR;
+                state_r <= CONF_PRNG;
                 cnt_r <= (others=>'0');
                 rand_requested_r <= '0';
                 rand_generated_r <= '0';
