@@ -26,6 +26,8 @@
 --!
 --===============================================================================================--
 
+use work.design_pkg.CCRW;
+
 package LWC_config is
     --! External bus: supported values are 8, 16 and 32 bits
     constant W          : positive := 32;
@@ -38,7 +40,7 @@ package LWC_config is
     --! Does not need to be the same as PDI_SHARES but this is the default
     constant SDI_SHARES : positive := PDI_SHARES;
     --! Width of RDI port in bits. Set to 0 if not used.
-    constant RW         : natural  := 384;
+    constant RW         : natural  := CCRW;
     --
     --! Assume an asynchronous and active-low reset.
     --! Can be set to `True` given that support for it is implemented in the CryptoCore
