@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.NIST_LWAPI_pkg.all;
-use work.Design_pkg.all;
+use work.design_pkg.all;
 use work.xoodyak_constants.all;
 
 entity xoodyak_ctrl is

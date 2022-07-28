@@ -13,12 +13,14 @@ sources = [
     "src_rtl/xoodyak_constants.vhd",
     "src_rtl/lambda.vhd",
     "src_rtl/and_dom_n.vhd",
+    "src_rtl/hpc3_and.vhd",
     "src_rtl/chi384.vhd",
     "src_rtl/rho_east.vhd",
     "src_rtl/xoodoo_round_pr.vhd",
     "src_rtl/cyclist_ops.vhd",
     "src_rtl/xoodyak_dp.vhd",
     "src_rtl/xoodyak_ctrl.vhd",
+    "src_rtl/tag_verif.vhd",
     "src_rtl/CryptoCore.vhd",
     "src_rtl/LWC_rtl/FIFO.vhd",
     "src_rtl/LWC_rtl/key_piso.vhd",
@@ -58,6 +60,7 @@ G_TEST_MODE = 0 # 1: stall inputs and outputs
 G_RANDOM_STALL = true
 G_TIMEOUT_CYCLES = 1000
 G_MAX_FAILURES = 0
+G_PRNG_RDI = true
 
 [lwc.aead]
 algorithm = "xoodyak128"
