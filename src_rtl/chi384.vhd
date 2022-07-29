@@ -150,10 +150,10 @@ begin
                 Q1  => B2_1
             );
 
-    elsif G_AND_GADGET = "HPC3+" generate
+    elsif G_AND_GADGET = "HPC3" or G_AND_GADGET = "HPC3+" generate
         constant G_ORDER : integer  := 1;
         constant G_WIDTH : integer  := 128;
-        constant G_PLUS  : boolean  := TRUE;
+        constant G_PLUS  : boolean  := G_AND_GADGET = "HPC3+";
         constant RAND_W  : positive := num_rand_bits(G_AND_GADGET, G_WIDTH, G_ORDER);
 
         function join(a, b : std_logic_vector) return slv_array is

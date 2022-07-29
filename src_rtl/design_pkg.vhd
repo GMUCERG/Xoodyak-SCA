@@ -20,7 +20,7 @@ use work.sca_gadgets_pkg.all;
 package design_pkg is
     constant NUM_TRIVIUM_UNITS : integer := 6; --! Trivium instances used in PRNG
     constant SEED_SIZE         : integer := NUM_TRIVIUM_UNITS * 128;
-    constant AND_GADGET        : string  := "HPC3+"; -- or "DOM"; 
+    constant SCA_GADGET        : string  := "HPC3+"; -- "HPC3", "HPC3+", or "DOM"; 
     --    constant  
     --------------------------------------------------------------------------------
     --------------------------- DO NOT CHANGE ANYTHING BELOW -------------------------
@@ -32,7 +32,7 @@ package design_pkg is
     constant CCSW    : integer  := 32;  --! variant dependent design parameters are assigned in body!
     constant CCW     : integer  := 32;  --! variant dependent design parameters are assigned in body!
     constant CCWdiv8 : integer  := 32 / 8; --! derived from parameters above, assigned in body.
-    constant CCRW    : positive := num_rand_bits(AND_GADGET, 384, 1); --! variant dependent design parameters are assigned in body!
+    constant CCRW    : positive := num_rand_bits(SCA_GADGET, 384, 1); --! variant dependent design parameters are assigned in body!
 
     attribute DONT_TOUCH : string;
 

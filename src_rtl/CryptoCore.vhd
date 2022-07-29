@@ -4,11 +4,11 @@ use ieee.numeric_std.all;
 use work.NIST_LWAPI_pkg.all;
 use work.design_pkg.all;
 use work.xoodyak_constants.all;
-use work.design_pkg.AND_GADGET;
+use work.design_pkg.SCA_GADGET;
 
 entity CryptoCore_SCA is
     generic(
-        G_AND_GADGET : string := AND_GADGET
+        G_AND_GADGET : string := SCA_GADGET
     );
     port(
         clk             : in  STD_LOGIC;
