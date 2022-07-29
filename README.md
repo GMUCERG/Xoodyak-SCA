@@ -7,6 +7,15 @@ The masking scheme is configurable through the `SCA_GADGET` parameter in [design
 - `"DOM"`:  Domain-oriented Masking (DOM)
 
 
+Number of random data input bits (RW) required for the selected schemes:
+
+| Gadget    | RW   |
+| --------- | ---- |
+| DOM       | 384  |
+| HPC3      | 768  |
+| HPC3+     | 1152 |
+
+
 The design is coded in VHDL hardware description language, and utilizes the latest version of GMU's [LWC Hardware API Development Package](https://github.com/GMUCERG/LWC).
 
 Please see the accompanying [documentation](./docs/documentation.pdf) for further information.
