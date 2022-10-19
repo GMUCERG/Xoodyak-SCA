@@ -5,6 +5,10 @@ url = "https://github.com/GMUCERG/Xoodyak-SCA"
 license = "GPL-3.0"
 version = "0.2.0"
 
+dependencies = [
+    { uri = "git+https://github.com/GMUCERG/LWC.git#hardware/LWC_SCA_wrapper.toml", rtl.pos = -1 },
+]
+
 [rtl]
 sources = [
     "src_rtl/LWC_config.vhd",
@@ -28,7 +32,8 @@ sources = [
     "src_rtl/LWC_rtl/PostProcessor.vhd",
     "src_rtl/LWC_rtl/LWC_SCA.vhd",
 ]
-top = "LWC_SCA"
+# top = "LWC_SCA"
+top = "LWC_SCA_wrapper"
 clock.port = "clk"
 
 
@@ -38,15 +43,14 @@ vhdl.version = "2008"
 [tb]
 sources = ["src_tb/LWC_TB_SCA.vhd"]
 top = "LWC_TB"
-# includes = []
 
 [tb.parameters]
-# G_FNAME_PDI = { file = "KAT/Xoodyak-384-DOM1-v1/pdi_shared_2.txt" }
-# G_FNAME_SDI = { file = "KAT/Xoodyak-384-DOM1-v1/sdi_shared_2.txt" }
-# G_FNAME_DO = { file = "KAT/Xoodyak-384-DOM1-v1/do.txt" }
-G_FNAME_PDI = { file = "BENCH_KAT/Xoodyak-384-DOM1-v1/timing_tests/pdi_shared_2.txt" }
-G_FNAME_SDI = { file = "BENCH_KAT/Xoodyak-384-DOM1-v1/timing_tests/sdi_shared_2.txt" }
-G_FNAME_DO = { file  = "BENCH_KAT/Xoodyak-384-DOM1-v1/timing_tests/do.txt" }
+G_FNAME_PDI = { file = "KAT/Xoodyak-384-DOM1-v1/pdi_shared_2.txt" }
+G_FNAME_SDI = { file = "KAT/Xoodyak-384-DOM1-v1/sdi_shared_2.txt" }
+G_FNAME_DO = { file = "KAT/Xoodyak-384-DOM1-v1/do.txt" }
+# G_FNAME_PDI = { file = "BENCH_KAT/Xoodyak-384-DOM1-v1/timing_tests/pdi_shared_2.txt" }
+# G_FNAME_SDI = { file = "BENCH_KAT/Xoodyak-384-DOM1-v1/timing_tests/sdi_shared_2.txt" }
+# G_FNAME_DO = { file  = "BENCH_KAT/Xoodyak-384-DOM1-v1/timing_tests/do.txt" }
 G_TEST_MODE = 4 # 1: stall inputs and outputs
 # G_RANDOM_STALL = true
 G_TIMEOUT_CYCLES = 1000
@@ -74,3 +78,8 @@ sdi.num_shares = 2
 [lwc.sca_protection]
 target = ["timing", "sda", "dpa"]
 order = 1
+
+
+[flow.vivado_synth]
+fpga.part = "xc7a100tftg256-2L"
+clock_period = 10
