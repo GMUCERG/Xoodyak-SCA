@@ -71,6 +71,7 @@ architecture behavioral of CryptoCore_SCA is
     
 
 begin
+    tag_neq <= '0'; -- FIXME
 	
     --! datapath
     dp: entity work.xoodyak_dp(behav)
@@ -151,7 +152,7 @@ begin
         extract => extract,
         sel_decrypt => sel_decrypt,
         --! From datapath
-        tag_neq => tag_neq,
+        -- tag_neq => 'tag_neq', -- FIXME add TAG_VERIF
         perm_valid => perm_valid,
         --! rdi data form outside world to be used as PRNG seed
         rdi_valid => rdi_valid,

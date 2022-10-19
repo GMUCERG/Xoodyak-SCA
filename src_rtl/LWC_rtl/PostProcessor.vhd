@@ -28,7 +28,7 @@
 --! Description
 --! bdo_type is not used at the moment.
 --!
---! VHDL standard compatibility: 1993, 2002, 2008
+--! VHDL standard compatibility: VHDL 1993, 2002, 2008, and later
 --!
 --===============================================================================================--
 
@@ -84,14 +84,14 @@ architecture RTL of PostProcessor is
    signal state                                  : t_state;
    -- flags
    signal eot_flag, decrypt_flag, status_success : std_logic;
+   signal must_verify_tag                        : std_logic; -- need to verify tag and tag has not been verified yet
    signal seglen_counter                         : unsigned(SEGLEN_BITS - 1 downto 0);
 
    --========================================== Wires ==========================================--
    -- next state
    signal nx_state                               : t_state;
    -- PRE VHDL-2008 COMPATIBILITY: readable temporaries assigned to output ports
-   signal cmd_ready_o, do_valid_o                : std_logic;
-   signal bdo_cleared                            : std_logic_vector(PDI_SHARES * CCW - 1 downto 0);
+   signal cmd_ready_o, do_valid_o, auth_ready_o  : std_logic;
    signal bdo_valid_p, bdo_ready_p, bdo_last_p   : std_logic;
    signal bdo_data_p                             : std_logic_vector(PDI_SHARES * W - 1 downto 0);
    signal seglen                                 : std_logic_vector(SEGLEN_BITS - 1 downto 0);
@@ -121,19 +121,32 @@ architecture RTL of PostProcessor is
 
 begin
    -- optimized out if CCW=W
-   bdoSIPO : entity work.DATA_SIPO
+   bdoSIPO : entity work.SIPO
+      generic map(
+         G_IN_W                => CCW,
+         G_N                   => W / CCW,
+         G_CHANNELS            => PDI_SHARES,
+         G_ASYNC_RSTN          => ASYNC_RSTN,
+         G_BIGENDIAN           => TRUE,
+         G_PIPELINED           => FALSE, -- TODO
+         G_SUBWORD             => TRUE,
+         G_CLEAR_INVALID_BYTES => TRUE
+      )
       port map(
-         clk          => clk,
-         rst          => rst,
+         clk        => clk,
+         rst        => rst,
          -- serial input (CCW)
-         data_s       => bdo_cleared,
-         end_of_input => bdo_last,
-         data_valid_s => bdo_valid,
-         data_ready_s => bdo_ready,
+         sin_data   => bdo_data,
+         sin_keep   => bdo_valid_bytes,
+         sin_last   => bdo_last,
+         sin_valid  => bdo_valid,
+         sin_ready  => bdo_ready,
          -- parallel output (W)
-         data_p       => bdo_data_p,
-         data_valid_p => bdo_valid_p,
-         data_ready_p => bdo_ready_p
+         pout_data  => bdo_data_p,
+         pout_keep  => open,
+         pout_last  => bdo_last_p,
+         pout_valid => bdo_valid_p,
+         pout_ready => bdo_ready_p
       );
 
    --===========================================================================================--
@@ -178,7 +191,7 @@ begin
       seglen <= seglen_msb8 & hdr_seglen;
    end generate;
    WNOT8_GEN : if W /= 8 generate
-      seglen <= cmd_hdr_seglen;
+      seglen <= cmd_hdr_seglen(seglen'range);
    end generate;
 
    --===========================================================================================--
@@ -212,14 +225,23 @@ begin
    process(clk)
    begin
       if rising_edge(clk) then
+
+         if auth_ready_o = '1' and auth_valid = '1' then
+            must_verify_tag <= '0';
+            status_success  <= auth_success;
+         end if;
+
          eot_flag     <= nx_eot;
          decrypt_flag <= nx_decrypt;
          case state is
             when S_INIT =>
-               status_success <= '1';
+               status_success  <= '1';
+               must_verify_tag <= nx_decrypt; -- set if operation is decrypt
             when S_HDR_MSG =>
-               if cmd_fire and hdr_last then
-                  seglen_counter <= unsigned(seglen);
+               if cmd_fire then
+                  if hdr_last then
+                     seglen_counter <= unsigned(seglen);
+                  end if;
                end if;
             when S_HDR_TAG =>
                if hdr_last then
@@ -228,10 +250,6 @@ begin
             when S_OUT_MSG | S_OUT_TAG =>
                if do_fire then
                   seglen_counter_hi <= seglen_counter_hi - 1;
-               end if;
-            when S_VERIFY_TAG =>
-               if auth_valid = '1' then
-                  status_success <= auth_success;
                end if;
             when others =>
                null;
@@ -244,7 +262,6 @@ begin
    cmd_fire             <= cmd_valid = '1' and cmd_ready_o = '1';
    bdo_p_fire           <= bdo_valid_p = '1' and bdo_ready_p = '1';
    -- set non-valid bytes to zero
-   bdo_cleared          <= clear_invalid_bytes(bdo_data, bdo_valid_bytes);
    -- TODO avoid recomparison to zero by including a seglen_is_zero in cmd from PreProcessor
    -- NOTE: The following optimization needs to be changed if other operations are added
    -- possibilities: INST_HASH ("1000"), INST_DEC  ("0011"), or INST_DEC ("0010")
@@ -252,29 +269,24 @@ begin
    op_is_decrypt        <= cmd_hdr_opcode(0) = '1'; -- INST_DEC
    -- temporary outputs
    do_valid             <= do_valid_o;
+   auth_ready           <= auth_ready_o;
    cmd_ready            <= cmd_ready_o;
    seglen_is_zero       <= is_zero(seglen);
    last_flit_of_segment <= is_zero(seglen_counter_hi(seglen_counter_hi'length - 1 downto 1)) and --
                            (seglen_counter_hi(0) = '0' or is_zero(seglen_counter_lo));
 
-   -- needs no delay as our last serial_in element is also the last parallel_out element ???
-   -- TODO not true for a generic PISO as the input could be stored and out_fire happens after in_fire
-   -- works for current DATA_SIPO implementation as it directly passes the last input fragment
-   bdo_last_p <= bdo_last;
-
    --===========================================================================================--
    --= When using VHDL 2008+ change to
    -- process(all)
    process(state, op_is_hash, op_is_decrypt, do_ready, do_fire, decrypt_flag, seglen_is_zero, --
-      eot_flag, cmd_valid, cmd_fire, hdr_first, hdr_last, auth_valid, status_success, --
-      cmd_hdr_opcode, bdo_valid_p, bdo_data_p, bdo_p_fire, bdo_last_p, seglen, last_flit_of_segment)
+      eot_flag, cmd_valid, cmd_fire, hdr_first, hdr_last, auth_valid, status_success, must_verify_tag, --
+      cmd_hdr_opcode, bdo_valid_p, bdo_data_p, bdo_p_fire, bdo_last_p, last_flit_of_segment)
    begin
       -- make sure we do not output intermediate data
       do_data           <= (others => '0');
       do_last           <= '0';
       do_valid_o        <= '0';
       bdo_ready_p       <= '0';
-      auth_ready        <= '0';
       -- Header-FIFO
       cmd_ready_o       <= '0';
       sending_hdr       <= false;
@@ -284,10 +296,13 @@ begin
       nx_state          <= state;
       nx_decrypt        <= decrypt_flag;
       nx_eot            <= eot_flag;
+      -- CryptoCore tag verification
+      auth_ready_o      <= '0';
 
       case state is
          -- initial state
          when S_INIT =>
+            nx_eot            <= '0';
             reset_hdr_counter <= true;
             cmd_ready_o       <= '1';
             nx_decrypt        <= to_std_logic(op_is_decrypt);
@@ -327,7 +342,11 @@ begin
             if cmd_fire and hdr_last then -- cmd_fire = do_fire
                if seglen_is_zero then
                   if decrypt_flag = '1' then
-                     nx_state <= S_VERIFY_TAG;
+                     if must_verify_tag = '1' then
+                        nx_state <= S_VERIFY_TAG;
+                     else
+                        nx_state <= S_STATUS;
+                     end if;
                   else
                      nx_state <= S_HDR_TAG;
                   end if;
@@ -338,13 +357,18 @@ begin
 
          -- relay CT/PT
          when S_OUT_MSG =>
-            bdo_ready_p <= do_ready;
-            do_valid_o  <= bdo_valid_p;
-            do_data     <= bdo_data_p;
+            bdo_ready_p  <= do_ready;
+            do_valid_o   <= bdo_valid_p;
+            do_data      <= bdo_data_p;
+            auth_ready_o <= must_verify_tag;
             if do_fire and last_flit_of_segment then
                if eot_flag = '1' then
                   if decrypt_flag = '1' then
-                     nx_state <= S_VERIFY_TAG;
+                     if must_verify_tag = '1' then
+                        nx_state <= S_VERIFY_TAG;
+                     else
+                        nx_state <= S_STATUS;
+                     end if;
                   else
                      nx_state <= S_HDR_TAG;
                   end if;
@@ -383,8 +407,8 @@ begin
 
          -- authentication done in CryptoCore
          when S_VERIFY_TAG =>
-            auth_ready <= '1';
-            if auth_valid = '1' then
+            auth_ready_o <= must_verify_tag;
+            if must_verify_tag = '0' or auth_valid = '1' then
                nx_state <= S_STATUS;
             end if;
 

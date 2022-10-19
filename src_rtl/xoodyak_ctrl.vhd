@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.NIST_LWAPI_pkg.all;
-use work.Design_pkg.all;
+use work.design_pkg.all;
 use work.xoodyak_constants.all;
 
 entity xoodyak_ctrl is
@@ -51,7 +51,7 @@ entity xoodyak_ctrl is
         sel_decrypt : out std_logic;
         perm_valid : in std_logic;
         --! from datapath
-        tag_neq  : in std_logic;
+        -- tag_neq  : in std_logic;
         --! rdi data form outside world to be used as PRNG seed
         rdi_valid : in std_logic;
         rdi_ready : out std_logic;
@@ -60,23 +60,18 @@ entity xoodyak_ctrl is
         cc_tag_ready : in std_logic;
         cc_tag_last  : out std_logic;
         tv_done     : in std_logic
---        ;
---        --! PRNG
---        prng_rdi_valid : in std_logic;
---        prng_reseed : out std_logic;
---        en_seed_sipo : out std_logic
     );
 end xoodyak_ctrl;
 
 architecture behav of xoodyak_ctrl is
 
     type state is (S_RST, S_LOAD_SEED, S_START_PRNG, S_WAIT_PRNG, S_IDLE,       -- init
-                   S_ABSORB_KEY, S_KEY_UP,                                      -- load key 
-                   S_ABSORB_NPUB, S_NPUB_UP,                                    -- absorb npub
-                   S_WAIT_AD, S_ABSORB_AD, S_AD_UP, S_ABSORB_AD_DOWN_E,         -- absorb ad
-                   S_CRYPT_UP, S_CRYPT_DOWN, S_CRYPT_DOWN_E,                    -- enc/dec
-                   S_GEN_TAG, S_OUTPUT_TAG, S_VERIFY_TAG, S_OUTPUT_VERIF_RES    -- tag processing
-                  ); 
+        S_ABSORB_KEY, S_KEY_UP,                                      -- load key
+        S_ABSORB_NPUB, S_NPUB_UP,                                    -- absorb npub
+        S_WAIT_AD, S_ABSORB_AD, S_AD_UP, S_ABSORB_AD_DOWN_E,         -- absorb ad
+        S_CRYPT_UP, S_CRYPT_DOWN, S_CRYPT_DOWN_E,                    -- enc/dec
+        S_GEN_TAG, S_OUTPUT_TAG, S_VERIFY_TAG, S_OUTPUT_VERIF_RES    -- tag processing
+    );
     signal current_state, next_state : state;
 --    type mode_t is (MODE_KEYED, MODE_HASH);
 --    signal mode, next_mode : mode_t;
@@ -142,25 +137,23 @@ begin
         rdi_ready <= '0';
         --
         cc_tag_valid <= '0';
-        cc_tag_last <= '0';        
-        
+        cc_tag_last <= '0';
+
         case current_state is
             when S_RST =>
                 next_state <= S_IDLE;
-                
+
             ---!============================================ Wait
             when S_IDLE =>
                 --clear
                 init <= '1';
                 state_in_sel <= "10"; --clear state
-                state_en <= '1';
                 next_tag_valid <= '1';
                 next_wrd_cnt <= (others=>'0');
                 
+                state_en <= '1';
                 if key_valid = '1' then
                     next_state <= S_ABSORB_KEY;
-                else
-                    next_state <= S_IDLE;
                 end if;
                 next_bdi_eoi_r <= '0';
                 next_first_blk <= '1';
@@ -169,9 +162,8 @@ begin
             when S_ABSORB_KEY =>
                 wrd2add_sel <= "01";
                 wrd_offset <= std_logic_vector(wrd_cnt(3 downto 0));
-                data_size <= bdi_size;
+                key_ready <= '1';
                 if key_valid = '1' then
-                    key_ready <= '1';
                     state_en <= '1';
                     if wrd_cnt = KEY_WORDS - 1 then
                         pad_key <= '1';
@@ -179,32 +171,29 @@ begin
                         next_state <= S_KEY_UP;
                     else
                         next_wrd_cnt <= wrd_cnt + 1;
-                        next_state <= S_ABSORB_KEY;
                     end if;
-                else
-                    next_state <= S_ABSORB_KEY;
                 end if;
 
             when S_KEY_UP =>
-                state_in_sel <= "01";
-                start_f <= '1';
                 rdi_ready <= '1';
-                if perm_valid = '1' then
-                    state_en <= '1';
+                state_in_sel <= "01";
+                if rdi_valid = '1' then
+                    start_f <= '1';
+                    if perm_valid = '1' then
+                        state_en <= '1';
+                    end if;
+                    if f_done = '1' then
+                        next_state <= S_ABSORB_NPUB;
+                        next_wrd_cnt <= (others=>'0');
+                    end if;
                 end if;
-                if f_done = '1' then
-                    next_state <= S_ABSORB_NPUB;
-                    next_wrd_cnt <= (others=>'0');
-                else
-                    next_state <= S_KEY_UP;
-                end if;
-                
+
             --!============================================ NPUB
             when S_ABSORB_NPUB =>
                 wrd_offset <= std_logic_vector(wrd_cnt(3 downto 0));
                 data_size <= bdi_size;
+                bdi_ready <= '1';
                 if bdi_valid = '1' then
-                    bdi_ready <= '1';
                     state_en <= '1';
                     if wrd_cnt = NPUB_WORDS - 1 then
                         offset_01 <= "100";
@@ -216,38 +205,36 @@ begin
                         next_state <= S_ABSORB_NPUB;
                     end if;
                     next_bdi_eoi_r <= bdi_eoi; --register it
-                else
-                    next_state <= S_ABSORB_NPUB;
                 end if;
 
             when S_NPUB_UP =>
                 state_in_sel <= "01";
-                start_f <= '1';
                 rdi_ready <= '1';
-                if perm_valid = '1' then
-                    state_en <= '1';
-                end if;                
-                if f_done = '1' then
-                    next_state <= S_WAIT_AD;
-                    next_wrd_cnt <= (others=>'0');
-                else
-                    next_state <= S_NPUB_UP;
+                if rdi_valid = '1' then
+                    start_f <= '1';
+                    if perm_valid = '1' then
+                        state_en <= '1';
+                    end if;
+                    if f_done = '1' then
+                        next_state <= S_WAIT_AD;
+                        next_wrd_cnt <= (others=>'0');
+                    end if;
                 end if;
-            
-            --!============================================ AD              
+
+            --!============================================ AD
             when S_WAIT_AD =>
                 if bdi_eoi_r = '1' then
                     next_state <= S_ABSORB_AD_DOWN_E;
                 else
                     if bdi_valid = '1' then
                         if bdi_type = HDR_AD then
-                                next_state <= S_ABSORB_AD;
+                            next_state <= S_ABSORB_AD;
                         else
-                                next_state <= S_ABSORB_AD_DOWN_E;
+                            next_state <= S_ABSORB_AD_DOWN_E;
                         end if;
                     end if;
                 end if;
-                
+
             when S_ABSORB_AD_DOWN_E =>
                 -- down empty string
                 cucd <= x"03";
@@ -255,18 +242,20 @@ begin
                 wrd2add_sel <= "10";
                 state_en <= '1';
                 next_state <= S_CRYPT_UP;
-            
+
             when S_ABSORB_AD =>
                 wrd_offset <= std_logic_vector(wrd_cnt(3 downto 0));
                 data_size <= bdi_size;
+                bdi_ready <= '1';
                 if bdi_valid = '1' then
-                    bdi_ready <= '1';
+                    next_bdi_eoi_r <= bdi_eoi; --register it
                     state_en <= '1';
                     if bdi_eot = '1' then
                         offset_01 <= bdi_size;
                         if first_blk = '1' then
                             cucd <= x"03";
                         end if;
+                        next_state <= S_CRYPT_UP;
                         next_state <= S_CRYPT_UP;
                         next_first_blk <= '1'; --get ready for msg
                         next_wrd_cnt <= (others=>'0');
@@ -281,59 +270,56 @@ begin
                             next_first_blk <= '0';
                         else
                             next_wrd_cnt <= wrd_cnt + 1;
-                            next_state <= S_ABSORB_AD;
-                        end if; 
+                        end if;
                     end if;
-                else
-                    next_state <= S_ABSORB_AD;
                 end if;
-                
+
             when S_AD_UP =>
                 state_in_sel <= "01";
-                start_f <= '1';
                 rdi_ready <= '1';
-                if perm_valid = '1' then
-                    state_en <= '1';
+                if rdi_valid = '1' then
+                    start_f <= '1';
+                    if perm_valid = '1' then
+                        state_en <= '1';
+                    end if;
+                    if f_done = '1' then
+                        next_state <= S_ABSORB_AD;
+                        next_wrd_cnt <= (others=>'0');
+                    end if;
                 end if;
-                if f_done = '1' then
-                    next_state <= S_ABSORB_AD;
-                    next_wrd_cnt <= (others=>'0');
-                else
-                    next_state <= S_AD_UP;
-                end if;
-                            
-            --!============================================ CRYPT                
+
+            --!============================================ CRYPT
             when S_CRYPT_UP =>
                 state_in_sel <= "01";
                 rdi_ready <= '1';
-                if f_ready = '1' then
-                    if first_blk = '1' then
-                        cucd <= x"80";
+                if rdi_valid = '1' then
+                    if f_ready = '1' then
+                        if first_blk = '1' then
+                            cucd <= x"80";
+                        end if;
+                    end if;
+                    start_f <= '1';
+                    if perm_valid = '1' then
+                        state_en <= '1';
+                    end if;
+                    if f_done = '1' then
+                        if bdi_eoi_r = '1' then
+                            next_state <= S_CRYPT_DOWN_E;
+                        else
+                            next_state <= S_CRYPT_DOWN;
+                        end if;
+                        next_wrd_cnt <= (others=>'0');
+                        next_first_blk <= '0';
                     end if;
                 end if;
-                start_f <= '1';
-                if perm_valid = '1' then
-                    state_en <= '1';
-                end if;
-                if f_done = '1' then
-                    if bdi_eoi_r = '1' then
-                        next_state <= S_CRYPT_DOWN_E;
-                    else
-                        next_state <= S_CRYPT_DOWN;
-                    end if;
-                    next_wrd_cnt <= (others=>'0');
-                    next_first_blk <= '0';
-                else
-                    next_state <= S_CRYPT_UP;
-                end if;
-                
+
             when S_CRYPT_DOWN_E =>
                 -- down empty string
                 wrd_offset <= (others=>'0');
                 wrd2add_sel <= "10";
                 state_en <= '1';
                 next_state <= S_GEN_TAG;
-                
+
             when S_CRYPT_DOWN =>
                 bdo_type <= HDR_CT;
                 wrd_offset <= std_logic_vector(wrd_cnt(3 downto 0));
@@ -342,9 +328,9 @@ begin
                 if decrypt_in = '1' then
                     sel_decrypt <= '1';
                 end if;
-                if bdi_valid = '1' and bdo_ready = '1' then
-                    bdi_ready <= '1';
-                    bdo_valid <= '1';
+                bdi_ready <= bdo_ready;
+                bdo_valid <= bdi_valid;
+                if bdi_valid = '1' and bdi_ready = '1' then
                     state_en <= '1';
                     if bdi_eot = '1' then
                         offset_01 <= bdi_size;
@@ -359,14 +345,11 @@ begin
                             next_first_blk <= '0';
                         else
                             next_wrd_cnt <= wrd_cnt + 1;
-                            next_state <= S_CRYPT_DOWN;
-                        end if; 
+                        end if;
                     end if;
-                else
-                    next_state <= S_CRYPT_DOWN;
-                end if;                
+                end if;
 
-            --!==============================================TAG PROCESSING           
+            --!==============================================TAG PROCESSING
             when S_GEN_TAG =>
                 --do up
                 state_in_sel <= "01";
@@ -386,8 +369,6 @@ begin
                         next_state <= S_OUTPUT_TAG;
                     end if;
                     next_wrd_cnt <= (others=>'0');
-                else
-                    next_state <= S_GEN_TAG;
                 end if;
 
             when S_OUTPUT_TAG =>
@@ -402,12 +383,10 @@ begin
                         end_of_block <= '1';
                     else
                         next_wrd_cnt <= wrd_cnt + 1;
-                        next_state <= S_OUTPUT_TAG; 
+                        next_state <= S_OUTPUT_TAG;
                     end if;
-                else
-                    next_state <= S_OUTPUT_TAG;
                 end if;
-                
+
             when S_VERIFY_TAG =>
                 wrd_offset <= std_logic_vector(wrd_cnt(3 downto 0));
                 bdi_ready <= cc_tag_ready;
@@ -420,20 +399,18 @@ begin
                         next_wrd_cnt <= wrd_cnt + 1;
                         next_state <= S_VERIFY_TAG;
                     end if;
-                else
-                    next_state <= S_VERIFY_TAG;
                 end if;
-                
+
             when S_OUTPUT_VERIF_RES =>
-                 if tv_done = '1' then
+                if tv_done = '1' then
                     next_state <= S_IDLE;
-                 end if;
-                
+                end if;
+
             when others =>
                 next_state <= S_IDLE;
         end case;
     end process;
-    
-    msg_auth <= tag_valid; 
+
+    msg_auth <= tag_valid;
 
 end behav;

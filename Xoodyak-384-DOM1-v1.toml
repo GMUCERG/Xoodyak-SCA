@@ -19,29 +19,21 @@ sources = [
     "src_rtl/cyclist_ops.vhd",
     "src_rtl/xoodyak_dp.vhd",
     "src_rtl/xoodyak_ctrl.vhd",
+    "src_rtl/tag_verif.vhd",
     "src_rtl/CryptoCore.vhd",
     "src_rtl/LWC_rtl/FIFO.vhd",
-    "src_rtl/LWC_rtl/key_piso.vhd",
-    "src_rtl/LWC_rtl/data_piso.vhd",
+    "src_rtl/LWC_rtl/PISO.vhd",
+    "src_rtl/LWC_rtl/SIPO.vhd",
     "src_rtl/LWC_rtl/PreProcessor.vhd",
-    "src_rtl/LWC_rtl/data_sipo.vhd",
     "src_rtl/LWC_rtl/PostProcessor.vhd",
     "src_rtl/LWC_rtl/LWC_SCA.vhd",
 ]
-# includes = []
 top = "LWC_SCA"
 clock.port = "clk"
-# clock.port = "clk"
-# reset.port = "reset"
-# reset.active_high = true
-# reset.asynchronous = false
-# parameters = { G_GENERIC1 = 123 }
+
 
 [language]
 vhdl.version = "2008"
-# vhdl.synopsys = false
-# verilog.version = "2001"
-# systemverilog.version = "2009"
 
 [tb]
 sources = ["src_tb/LWC_TB_SCA.vhd"]
@@ -49,18 +41,19 @@ top = "LWC_TB"
 # includes = []
 
 [tb.parameters]
-# {file: "xx"} is an extension to specify a string generic/parameter pointing to a relative path:
-G_FNAME_PDI = { file = "KAT/Xoodyak-384-DOM1-v1/pdi_shared_2.txt" }
-G_FNAME_SDI = { file = "KAT/Xoodyak-384-DOM1-v1/sdi_shared_2.txt" }
-G_FNAME_RDI = { file = "KAT/Xoodyak-384-DOM1-v1/rdi.txt" }
-G_FNAME_DO = { file = "KAT/Xoodyak-384-DOM1-v1/do.txt" }
-G_TEST_MODE = 0 # 1: stall inputs and outputs
-G_RANDOM_STALL = true
+# G_FNAME_PDI = { file = "KAT/Xoodyak-384-DOM1-v1/pdi_shared_2.txt" }
+# G_FNAME_SDI = { file = "KAT/Xoodyak-384-DOM1-v1/sdi_shared_2.txt" }
+# G_FNAME_DO = { file = "KAT/Xoodyak-384-DOM1-v1/do.txt" }
+G_FNAME_PDI = { file = "BENCH_KAT/Xoodyak-384-DOM1-v1/timing_tests/pdi_shared_2.txt" }
+G_FNAME_SDI = { file = "BENCH_KAT/Xoodyak-384-DOM1-v1/timing_tests/sdi_shared_2.txt" }
+G_FNAME_DO = { file  = "BENCH_KAT/Xoodyak-384-DOM1-v1/timing_tests/do.txt" }
+G_TEST_MODE = 4 # 1: stall inputs and outputs
+# G_RANDOM_STALL = true
 G_TIMEOUT_CYCLES = 1000
 G_MAX_FAILURES = 0
 
 [lwc.aead]
-algorithm = "xoodyak128"
+algorithm = "xoodyakv1"
 # key_bits = 128
 # npub_bits = 128
 # tag_bits = 128
